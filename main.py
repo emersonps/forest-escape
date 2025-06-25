@@ -79,7 +79,7 @@ def update(dt):
 class Hero:
     def __init__(self):
         self.image = images.hero_sheet
-        self.pos = [65, 9]
+        self.pos = [75, 9]
         self.speed = 10
         self.frame_width = 55
         self.frame_height = 78
@@ -89,26 +89,22 @@ class Hero:
 
     def update(self):
         self.is_walking = False
-        new_x, new_y = self.pos[0], self.pos[1]
-
         if keyboard.left:
-            new_x -= self.speed
+            self.pos[0] -= self.speed
             self.is_walking = True
         if keyboard.right:
-            new_x += self.speed
+            self.pos[0] += self.speed
             self.is_walking = True
         if keyboard.up:
-            new_y -= self.speed
+            self.pos[1] -= self.speed
             self.is_walking = True
         if keyboard.down:
-            new_y += self.speed
+            self.pos[1] += self.speed
             self.is_walking = True
 
-        # Limitar a posição do herói dentro da tela
-        new_x = max(0, min(new_x, WIDTH - self.frame_width))
-        new_y = max(0, min(new_y, HEIGHT - self.frame_height))
-
-        self.pos = [new_x, new_y]
+        # Limitar herói dentro da tela
+        self.pos[0] = max(0, min(self.pos[0], WIDTH - self.frame_width))
+        self.pos[1] = max(0, min(self.pos[1], HEIGHT - self.frame_height))
 
     def animate(self):
         if self.is_walking:
@@ -123,7 +119,14 @@ class Hero:
         screen.surface.blit(self.image, self.pos, source_rect)
 
     def get_rect(self):
-        return Rect(self.pos[0], self.pos[1], self.frame_width, self.frame_height)
+        padding_x = 10
+        padding_y = 10
+        return Rect(
+            self.pos[0] + padding_x,
+            self.pos[1] + padding_y,
+            self.frame_width - 2 * padding_x,
+            self.frame_height - 2 * padding_y,
+        )
 
 
 # --- INIMIGO COM SPRITESHEET ---
@@ -161,7 +164,15 @@ class Enemy:
         screen.surface.blit(self.image, self.pos, source_rect)
 
     def get_rect(self):
-        return Rect(self.pos[0], self.pos[1], self.frame_width, self.frame_height)
+        padding_x = 15
+        padding_y = 15
+        return Rect(
+            self.pos[0] + padding_x,
+            self.pos[1] + padding_y,
+            self.frame_width - 2 * padding_x,
+            self.frame_height - 2 * padding_y,
+        )
+
 
 # --- INSTÂNCIAS ---
 hero = Hero()
