@@ -1,6 +1,6 @@
 import random
 import math
-from pygame import Rect  # permitido
+from pygame import Rect
 import pgzrun
 
 WIDTH = 565
@@ -20,7 +20,7 @@ music.play('sound_game')
 
 # --- BOTÕES (recorte da imagem spritesheet) ---
 button_start_rect = Rect(25, 22, 138, 55)        # PLAY
-button_sound_rect = Rect(214, 183, 190, 60)       # SOUND
+button_sound_rect = Rect(214, 183, 190, 60)      # SOUND
 button_exit_rect = Rect(25, 187, 138, 60)        # EXIT
 
 # Posições na tela
@@ -29,9 +29,9 @@ button_sound_pos = (WIDTH // 2 - 65, 180)
 button_exit_pos = (WIDTH // 2 - 85, 260)
 
 # Hitboxes para clique
-button_start_hitbox = Rect(button_start_pos, (138, 45))
+button_start_hitbox = Rect(button_start_pos, (138, 55))
 button_sound_hitbox = Rect(button_sound_pos, (60, 60))
-button_exit_hitbox = Rect(button_exit_pos, (138, 45))
+button_exit_hitbox = Rect(button_exit_pos, (138, 60))
 
 
 # --- FUNÇÕES DE MENU ---
@@ -61,7 +61,6 @@ def draw():
 
     if game_state == STATE_MENU:
         screen.blit('fundo', (0, 0))
-
         screen.surface.blit(images.menu_sprites, button_start_pos, button_start_rect)
         screen.surface.blit(images.menu_sprites, button_sound_pos, button_sound_rect)
         screen.surface.blit(images.menu_sprites, button_exit_pos, button_exit_rect)
@@ -76,74 +75,97 @@ def update(dt):
         update_game(dt)
 
 
-# --- HERÓI ---
+# --- HERÓI COM SPRITESHEET ---
 class Hero:
     def __init__(self):
-        self.actor = Actor('hero_idle1', (100, 100))
-        self.speed = 3
-        self.walk_images = ['hero_walk1', 'hero_walk2']
-        self.idle_images = ['hero_idle1', 'hero_idle2']
-        self.current_image = 0
+        self.image = images.hero_sheet
+        self.pos = [65, 9]
+        self.speed = 10
+        self.frame_width = 55
+        self.frame_height = 78
+        self.frames = [0, 1, 2, 3]
+        self.current_frame = 0
         self.is_walking = False
 
     def update(self):
         self.is_walking = False
+        new_x, new_y = self.pos[0], self.pos[1]
+
         if keyboard.left:
-            self.actor.x -= self.speed
+            new_x -= self.speed
             self.is_walking = True
         if keyboard.right:
-            self.actor.x += self.speed
+            new_x += self.speed
             self.is_walking = True
         if keyboard.up:
-            self.actor.y -= self.speed
+            new_y -= self.speed
             self.is_walking = True
         if keyboard.down:
-            self.actor.y += self.speed
+            new_y += self.speed
             self.is_walking = True
 
+        # Limitar a posição do herói dentro da tela
+        new_x = max(0, min(new_x, WIDTH - self.frame_width))
+        new_y = max(0, min(new_y, HEIGHT - self.frame_height))
+
+        self.pos = [new_x, new_y]
+
     def animate(self):
-        self.current_image = (self.current_image + 1) % 2
         if self.is_walking:
-            self.actor.image = self.walk_images[self.current_image]
+            self.current_frame = (self.current_frame + 1) % len(self.frames)
         else:
-            self.actor.image = self.idle_images[self.current_image]
+            self.current_frame = 0
 
     def draw(self):
-        self.actor.draw()
+        src_x = self.current_frame * self.frame_width
+        src_y = 0
+        source_rect = Rect(src_x, src_y, self.frame_width, self.frame_height)
+        screen.surface.blit(self.image, self.pos, source_rect)
+
+    def get_rect(self):
+        return Rect(self.pos[0], self.pos[1], self.frame_width, self.frame_height)
 
 
-# --- INIMIGOS ---
+# --- INIMIGO COM SPRITESHEET ---
 class Enemy:
     def __init__(self, x, y):
-        self.actor = Actor('enemy1_walk1', (x, y))
-        self.walk_images = ['enemy1_walk1', 'enemy1_walk2']
-        self.current_image = 0
-        self.direction = random.choice(['horizontal', 'vertical'])
-        self.range = 50
-        self.start_pos = (x, y)
-        self.speed = 1
+        self.image = images.enemy_sheet
+        self.pos = [x, y]
+        self.speed_x = random.choice([-1, 1]) * random.uniform(0.5, 1.5)
+        self.speed_y = random.choice([-1, 1]) * random.uniform(0.5, 1.5)
+
+        self.frame_width = 80
+        self.frame_height = 80
+
+        self.frames = [0, 1, 2, 3, 2, 1]
+        self.current_frame = 0
 
     def update(self):
-        if self.direction == 'horizontal':
-            self.actor.x += self.speed
-            if abs(self.actor.x - self.start_pos[0]) > self.range:
-                self.speed *= -1
-        else:
-            self.actor.y += self.speed
-            if abs(self.actor.y - self.start_pos[1]) > self.range:
-                self.speed *= -1
+        # Movimento contínuo
+        self.pos[0] += self.speed_x
+        self.pos[1] += self.speed_y
+
+        # Rebater nas bordas da tela
+        if self.pos[0] < 0 or self.pos[0] + self.frame_width > WIDTH:
+            self.speed_x *= -1
+        if self.pos[1] < 0 or self.pos[1] + self.frame_height > HEIGHT:
+            self.speed_y *= -1
 
     def animate(self):
-        self.current_image = (self.current_image + 1) % 2
-        self.actor.image = self.walk_images[self.current_image]
+        self.current_frame = (self.current_frame + 1) % len(self.frames)
 
     def draw(self):
-        self.actor.draw()
+        src_x = self.frames[self.current_frame] * self.frame_width
+        src_y = 0  # Primeira linha da spritesheet
+        source_rect = Rect(src_x, src_y, self.frame_width, self.frame_height)
+        screen.surface.blit(self.image, self.pos, source_rect)
 
+    def get_rect(self):
+        return Rect(self.pos[0], self.pos[1], self.frame_width, self.frame_height)
 
 # --- INSTÂNCIAS ---
 hero = Hero()
-enemies = [Enemy(400, 200), Enemy(600, 400)]
+enemies = [Enemy(400, 200), Enemy(200, 300), Enemy(200, 300), Enemy(200, 300)]
 
 
 # --- LÓGICA DE JOGO ---
@@ -170,14 +192,14 @@ def animate_all():
 
 def check_collision():
     for enemy in enemies:
-        if hero.actor.colliderect(enemy.actor):
+        if hero.get_rect().colliderect(enemy.get_rect()):
             if sound_on:
                 sounds.hit.play()
             reset_game()
 
 
 def reset_game():
-    hero.actor.pos = (100, 100)
+    hero.pos = [100, 100]
 
 
 # Agendamento da animação dos sprites
