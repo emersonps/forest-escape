@@ -1,5 +1,4 @@
 import random
-import math
 from pygame import Rect
 import pgzrun
 
@@ -13,6 +12,7 @@ STATE_EXIT = 'exit'
 
 game_state = STATE_MENU
 sound_on = True
+game_over_played = False  # flag para som game_over
 
 # Música
 music.set_volume(0.5)
@@ -45,15 +45,18 @@ def toggle_sound():
 
 
 def on_mouse_down(pos):
-    global game_state
+    global game_state, game_over_played
     if game_state == STATE_MENU:
         if button_start_hitbox.collidepoint(pos):
+            hero.pos = [75, 9]            # reseta posição
+            game_over_played = False      # libera game_over para próxima vez
+            music.stop()
+            music.play('sound_game')      # retoma música de fundo
             game_state = STATE_PLAYING
         elif button_sound_hitbox.collidepoint(pos):
             toggle_sound()
         elif button_exit_hitbox.collidepoint(pos):
             exit()
-
 
 # --- DRAW ---
 def draw():
@@ -116,7 +119,8 @@ class Hero:
         src_x = self.current_frame * self.frame_width
         src_y = 0
         source_rect = Rect(src_x, src_y, self.frame_width, self.frame_height)
-        screen.surface.blit(self.image, self.pos, source_rect)
+        dest_rect = Rect(self.pos[0], self.pos[1], self.frame_width, self.frame_height)
+        screen.surface.blit(self.image, dest_rect, source_rect)
 
     def get_rect(self):
         padding_x = 10
@@ -202,16 +206,35 @@ def animate_all():
 
 
 def check_collision():
+    global game_over_played, game_state
     for enemy in enemies:
         if hero.get_rect().colliderect(enemy.get_rect()):
-            if sound_on:
-                sounds.hit.play()
+            if sound_on and not game_over_played:
+                music.stop()
+                music.play('game_over')      # toca game_over.ogg uma vez
+                game_over_played = True
             reset_game()
+            game_state = STATE_MENU
+            break  # importa sair do loop para não repetir
 
 
+# Posições iniciais dos inimigos
+ENEMY_START_POSITIONS = [
+    (400, 200),
+    (200, 300),
+    (200, 300),
+    (200, 300)
+]
+
+# --- INSTÂNCIAS ---
+hero = Hero()
+enemies = [Enemy(x, y) for x, y in ENEMY_START_POSITIONS]
+
+# RESET GAME
 def reset_game():
-    hero.pos = [100, 100]
-
+    hero.pos = [75, 9]
+    for enemy, (x0, y0) in zip(enemies, ENEMY_START_POSITIONS):
+        enemy.pos = [x0, y0]
 
 # Agendamento da animação dos sprites
 clock.schedule_interval(animate_all, 0.3)
